@@ -2,7 +2,6 @@
 
 OpenAI-compatible proxy server for the CommandCode API. It exposes `/v1/chat/completions` and `/v1/models` endpoints so OpenAI-compatible clients can call CommandCode models through a local HTTP server.
 
-Repository: https://github.com/dev2k6/command-code-proxy-server
 
 Version: `v1.0.8`
 
@@ -13,9 +12,7 @@ Version: `v1.0.8`
 - OpenAI-compatible model list endpoint
 - Short model name mapping
 - Optional default API key from CLI
-- Per-request API key via `Authorization` header
 - Configurable host and port
-- Checks GitHub tags for a newer proxy version and displays it next to the current version
 
 ## Requirements
 
@@ -198,11 +195,10 @@ Unknown model names are passed through unchanged.
     ├── proxy
     │   ├── convert.go
     │   ├── model.go
-    │   └── proxy.go
+    │   ├── proxy.go
+    │   └── responses.go
     ├── server
     │   └── server.go
-    ├── update
-    │   └── update.go
     └── version
         └── version.go
 ```
@@ -214,19 +210,6 @@ Unknown model names are passed through unchanged.
 3. The proxy sends the request to `https://api.commandcode.ai/alpha/generate`.
 4. CommandCode streaming NDJSON events are converted back to OpenAI-compatible SSE chunks or collected into a single JSON response.
 
-## Version check
-
-On startup and when running `-version`, the proxy calls:
-
-```text
-https://api.github.com/repos/dev2k6/command-code-proxy-server/tags
-```
-
-If the latest GitHub tag is newer than the current app version, the version line is displayed as:
-
-```text
-v1.0.8 (latest: v1.x.x)
-```
 
 ## CommandCode version header
 

@@ -4,13 +4,11 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/dev2k6/command-code-proxy-server/internal/proxy"
-	"github.com/dev2k6/command-code-proxy-server/internal/server"
-	"github.com/dev2k6/command-code-proxy-server/internal/update"
+	"github.com/deloney-web/commandcodeproxy/internal/proxy"
+	"github.com/deloney-web/commandcodeproxy/internal/server"
 )
 
 const appVersion = "v1.0.8"
-const repositoryURL = "https://github.com/dev2k6/command-code-proxy-server"
 const debugLogging = false
 
 func main() {
@@ -38,13 +36,8 @@ func main() {
 }
 
 func versionText() string {
-	latest, hasUpdate, err := update.LatestVersion(appVersion)
-	if err != nil || !hasUpdate {
-		return appVersion
-	}
-	return fmt.Sprintf("%s (latest: %s)", appVersion, latest)
+	return appVersion
 }
-
 func printStartupInfo(srv *server.Server) {
 	fmt.Println("")
 	fmt.Println("========================================")
@@ -52,7 +45,6 @@ func printStartupInfo(srv *server.Server) {
 	fmt.Println("========================================")
 	fmt.Println("")
 	fmt.Printf("  Version:     %s\n", versionText())
-	fmt.Printf("  Repository:  %s\n", repositoryURL)
 	fmt.Printf("  Host:        %s\n", srv.GetHost())
 	fmt.Printf("  Port:        %s\n", srv.GetPort())
 	fmt.Println("  Base URL:    https://api.commandcode.ai")

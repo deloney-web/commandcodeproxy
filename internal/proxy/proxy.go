@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dev2k6/command-code-proxy-server/internal/api"
-	"github.com/dev2k6/command-code-proxy-server/internal/version"
+	"github.com/deloney-web/commandcodeproxy/internal/api"
+	"github.com/deloney-web/commandcodeproxy/internal/version"
 	"github.com/google/uuid"
 )
 
@@ -570,6 +570,18 @@ func (p *Proxy) HandleResponses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get API key from client Authorization header or server default
+	apiKey := r.Header.Get("Authorization")
+	if apiKey != "" {
+		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
+		apiKey = strings.TrimSpace(apiKey)
+	} else if p.APIKey != "" {
+		apiKey = p.APIKey
+	} else {
+		p.writeOpenAIError(w, http.StatusUnauthorized, "API key required. Set Authorization header.", "authentication_error")
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		p.writeOpenAIError(w, http.StatusBadRequest, "Failed to read body", "invalid_request_error")
@@ -584,16 +596,51 @@ func (p *Proxy) HandleResponses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Convert to chat request to reuse BuildRequest
 	chatReq := responsesToChatRequest(responsesReq)
-	rewritten, err := json.Marshal(chatReq)
+
+	// Build CommandCode request
+	ccBody, err := p.BuildRequest(chatReq)
 	if err != nil {
 		p.writeOpenAIError(w, http.StatusInternalServerError, "Failed to build request", "server_error")
 		return
 	}
 
-	r.Body = io.NopCloser(bytes.NewReader(rewritten))
-	r.ContentLength = int64(len(rewritten))
-	p.HandleChatCompletions(w, r)
+	// Create upstream request
+	ccReq, err := p.CreateUpstreamRequest(r.Context(), ccBody, apiKey)
+	if err != nil {
+		p.writeOpenAIError(w, http.StatusInternalServerError, "Failed to create upstream request", "server_error")
+		return
+	}
+
+	// Call upstream
+	ccResp, err := p.CallUpstream(ccReq)
+	if err != nil {
+		p.writeOpenAIError(w, http.StatusBadGateway, err.Error(), "api_error")
+		return
+	}
+	defer ccResp.Body.Close()
+
+	if ccResp.StatusCode != http.StatusOK {
+		errBody, _ := io.ReadAll(ccResp.Body)
+		message := fmt.Sprintf("Upstream error: %s", string(errBody))
+		log.Printf("[ERROR] Upstream returned %d: %s", ccResp.StatusCode, string(errBody))
+		status := http.StatusBadGateway
+		if ccResp.StatusCode >= http.StatusBadRequest && ccResp.StatusCode < http.StatusInternalServerError {
+			status = ccResp.StatusCode
+		}
+		p.writeOpenAIError(w, status, message, "api_error")
+		return
+	}
+
+	requestID := "resp_" + uuid.New().String()[:28]
+	created := time.Now().Unix()
+
+	if responsesReq.Stream {
+		p.streamResponses(w, r, ccResp, requestID, ccBody.Params.Model, created)
+	} else {
+		p.nonStreamResponses(w, ccResp, requestID, ccBody.Params.Model, created)
+	}
 }
 
 func responsesToChatRequest(req api.OpenAIResponsesRequest) api.OpenAIChatRequest {

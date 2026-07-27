@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dev2k6/command-code-proxy-server/internal/api"
+	"github.com/deloney-web/commandcodeproxy/internal/api"
 )
 
 // Convert OpenAI messages to CommandCode format

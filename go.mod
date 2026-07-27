@@ -1,4 +1,4 @@
-module github.com/dev2k6/command-code-proxy-server
+module github.com/deloney-web/commandcodeproxy
 
 go 1.26.2
 

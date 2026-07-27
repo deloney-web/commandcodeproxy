@@ -141,3 +141,81 @@ type OpenAIModelList struct {
 	Object string        `json:"object"`
 	Data   []OpenAIModel `json:"data"`
 }
+
+// Responses API types (client-facing for /v1/responses endpoint)
+
+type OpenAIResponseObject struct {
+	ID     string         `json:"id"`
+	Object string         `json:"object"`
+	Status string         `json:"status"`
+	Model  string         `json:"model"`
+	Output []ResponseItem `json:"output"`
+	Usage  *OpenAIUsage   `json:"usage,omitempty"`
+	Error  *OpenAIError   `json:"error,omitempty"`
+}
+
+type ResponseItem struct {
+	ID      string                `json:"id"`
+	Type    string                `json:"type"`
+	Role    string                `json:"role,omitempty"`
+	Status  string                `json:"status"`
+	Content []ResponseContentPart `json:"content,omitempty"`
+}
+
+type ResponseContentPart struct {
+	Type        string `json:"type"`
+	Text        string `json:"text"`
+	Annotations []any  `json:"annotations"`
+}
+
+// SSE event payloads for Responses API streaming
+type ResponseCreatedEvent struct {
+	Type     string               `json:"type"`
+	Response OpenAIResponseObject `json:"response"`
+}
+
+type ResponseInProgressEvent struct {
+	Type     string               `json:"type"`
+	Response OpenAIResponseObject `json:"response"`
+}
+
+type ResponseOutputItemAddedEvent struct {
+	Type string       `json:"type"`
+	Item ResponseItem `json:"item"`
+}
+
+type ResponseContentPartAddedEvent struct {
+	Type         string              `json:"type"`
+	Part         ResponseContentPart `json:"part"`
+	ItemID       string              `json:"item_id"`
+	ContentIndex int                 `json:"content_index"`
+}
+
+type ResponseOutputTextDeltaEvent struct {
+	Type         string `json:"type"`
+	Delta        string `json:"delta"`
+	ItemID       string `json:"item_id"`
+	ContentIndex int    `json:"content_index"`
+}
+
+type ResponseOutputTextDoneEvent struct {
+	Type         string `json:"type"`
+	Text         string `json:"text"`
+	ItemID       string `json:"item_id"`
+	ContentIndex int    `json:"content_index"`
+}
+
+type ResponseCompletedEvent struct {
+	Type     string               `json:"type"`
+	Response OpenAIResponseObject `json:"response"`
+}
+
+type ResponseFailedEvent struct {
+	Type     string               `json:"type"`
+	Response OpenAIResponseObject `json:"response"`
+}
+
+type ResponseIncompleteEvent struct {
+	Type     string               `json:"type"`
+	Response OpenAIResponseObject `json:"response"`
+}
