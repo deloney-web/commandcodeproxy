@@ -95,6 +95,19 @@ func (p *Proxy) BuildRequest(openAIReq api.OpenAIChatRequest) (api.CCRequestBody
 
 	tools := ConvertTools(openAIReq.Tools)
 
+	memory := ""
+	taste := ""
+	skills := ""
+	if openAIReq.Memory != nil {
+		memory = *openAIReq.Memory
+	}
+	if openAIReq.Taste != nil {
+		taste = *openAIReq.Taste
+	}
+	if openAIReq.Skills != nil {
+		skills = *openAIReq.Skills
+	}
+
 	ccBody := api.CCRequestBody{
 		Config: api.CCConfig{
 			WorkingDir:    ".",
@@ -107,9 +120,9 @@ func (p *Proxy) BuildRequest(openAIReq api.OpenAIChatRequest) (api.CCRequestBody
 			GitStatus:     "",
 			RecentCommits: []string{},
 		},
-		Memory: "",
-		Taste:  "",
-		Skills: "",
+		Memory:   memory,
+		Taste:    taste,
+		Skills:   skills,
 		Params: api.CCChatParams{
 			Model:       model,
 			Messages:    ccMessages,
@@ -121,7 +134,6 @@ func (p *Proxy) BuildRequest(openAIReq api.OpenAIChatRequest) (api.CCRequestBody
 		},
 		ThreadID: uuid.New().String(),
 	}
-
 	return ccBody, nil
 }
 
@@ -715,36 +727,82 @@ func responseItemsToMessages(items []any) []api.OpenAIMessage {
 
 // HandleModels handles the /v1/models endpoint
 func (p *Proxy) HandleModels(w http.ResponseWriter, r *http.Request) {
+	// All supported models with full IDs, aliases, and approximate release dates
 	models := api.OpenAIModelList{
 		Object: "list",
 		Data: []api.OpenAIModel{
-			// MoonshotAI
-			{ID: "moonshotai/Kimi-K2.6", Object: "model", Created: 0, OwnedBy: "moonshotai"},
-			{ID: "moonshotai/Kimi-K2.5", Object: "model", Created: 0, OwnedBy: "moonshotai"},
-			// ZhipuAI
-			{ID: "zai-org/GLM-5.1", Object: "model", Created: 0, OwnedBy: "zhipuai"},
-			{ID: "zai-org/GLM-5", Object: "model", Created: 0, OwnedBy: "zhipuai"},
-			// MiniMaxAI
-			{ID: "MiniMaxAI/MiniMax-M2.7", Object: "model", Created: 0, OwnedBy: "minimaxai"},
-			{ID: "MiniMaxAI/MiniMax-M2.5", Object: "model", Created: 0, OwnedBy: "minimaxai"},
-			{ID: "MiniMaxAI/MiniMax-M3", Object: "model", Created: 0, OwnedBy: "minimaxai"},
-			// DeepSeek
-			{ID: "deepseek/deepseek-v4-pro", Object: "model", Created: 0, OwnedBy: "deepseek"},
-			{ID: "deepseek/deepseek-v4-flash", Object: "model", Created: 0, OwnedBy: "deepseek"},
-			// Qwen
-			{ID: "Qwen/Qwen3.6-Max-Preview", Object: "model", Created: 0, OwnedBy: "qwen"},
-			{ID: "Qwen/Qwen3.6-Plus", Object: "model", Created: 0, OwnedBy: "qwen"},
-			// StepFun
-			{ID: "stepfun/Step-3.5-Flash", Object: "model", Created: 0, OwnedBy: "stepfun"},
-			{ID: "stepfun/Step-3.7-Flash", Object: "model", Created: 0, OwnedBy: "stepfun"},
-			// Qwen (3.7 line)
-			{ID: "Qwen/Qwen3.7-Max-Free", Object: "model", Created: 0, OwnedBy: "qwen"},
-			{ID: "Qwen/Qwen3.7-Max", Object: "model", Created: 0, OwnedBy: "qwen"},
-			// Xiaomi MiMo
-			{ID: "xiaomi/mimo-v2.5-pro", Object: "model", Created: 0, OwnedBy: "xiaomi"},
-			{ID: "xiaomi/mimo-v2.5", Object: "model", Created: 0, OwnedBy: "xiaomi"},
-			// Google
-			{ID: "google/gemini-3.1-flash-lite", Object: "model", Created: 0, OwnedBy: "google"},
+			// --- MoonshotAI (Kimi) ---
+			{ID: "moonshotai/Kimi-K2.6", Object: "model", Created: 1748217600, OwnedBy: "moonshotai"},
+			{ID: "kimi-k2.6", Object: "model", Created: 1748217600, OwnedBy: "moonshotai"},
+			{ID: "kimi2.6", Object: "model", Created: 1748217600, OwnedBy: "moonshotai"},
+			{ID: "moonshotai/Kimi-K2.5", Object: "model", Created: 1745020800, OwnedBy: "moonshotai"},
+			{ID: "kimi-k2.5", Object: "model", Created: 1745020800, OwnedBy: "moonshotai"},
+			{ID: "kimi2.5", Object: "model", Created: 1745020800, OwnedBy: "moonshotai"},
+
+			// --- ZhipuAI (GLM) ---
+			{ID: "zai-org/GLM-5.1", Object: "model", Created: 1749513600, OwnedBy: "zhipuai"},
+			{ID: "glm-5.1", Object: "model", Created: 1749513600, OwnedBy: "zhipuai"},
+			{ID: "zai-org/GLM-5", Object: "model", Created: 1748217600, OwnedBy: "zhipuai"},
+			{ID: "glm-5", Object: "model", Created: 1748217600, OwnedBy: "zhipuai"},
+
+			// --- MiniMaxAI ---
+			{ID: "MiniMaxAI/MiniMax-M3", Object: "model", Created: 1751328000, OwnedBy: "minimaxai"},
+			{ID: "minimax-m3", Object: "model", Created: 1751328000, OwnedBy: "minimaxai"},
+			{ID: "minimax3", Object: "model", Created: 1751328000, OwnedBy: "minimaxai"},
+			{ID: "MiniMaxAI/MiniMax-M2.7", Object: "model", Created: 1748304000, OwnedBy: "minimaxai"},
+			{ID: "minimax-m2.7", Object: "model", Created: 1748304000, OwnedBy: "minimaxai"},
+			{ID: "minimax2.7", Object: "model", Created: 1748304000, OwnedBy: "minimaxai"},
+			{ID: "MiniMaxAI/MiniMax-M2.5", Object: "model", Created: 1745020800, OwnedBy: "minimaxai"},
+			{ID: "minimax-m2.5", Object: "model", Created: 1745020800, OwnedBy: "minimaxai"},
+			{ID: "minimax2.5", Object: "model", Created: 1745020800, OwnedBy: "minimaxai"},
+			{ID: "minimax", Object: "model", Created: 1745020800, OwnedBy: "minimaxai"},
+
+			// --- DeepSeek ---
+			{ID: "deepseek/deepseek-v4-pro", Object: "model", Created: 1750896000, OwnedBy: "deepseek"},
+			{ID: "deepseek-v4-pro", Object: "model", Created: 1750896000, OwnedBy: "deepseek"},
+			{ID: "deepseek-v4", Object: "model", Created: 1750896000, OwnedBy: "deepseek"},
+			{ID: "deepseek-pro", Object: "model", Created: 1750896000, OwnedBy: "deepseek"},
+			{ID: "deepseek/deepseek-v4-flash", Object: "model", Created: 1749513600, OwnedBy: "deepseek"},
+			{ID: "deepseek-v4-flash", Object: "model", Created: 1749513600, OwnedBy: "deepseek"},
+			{ID: "deepseek-flash", Object: "model", Created: 1749513600, OwnedBy: "deepseek"},
+
+			// --- Qwen (3.6) ---
+			{ID: "Qwen/Qwen3.6-Max-Preview", Object: "model", Created: 1748044800, OwnedBy: "qwen"},
+			{ID: "qwen-3.6-max-preview", Object: "model", Created: 1748044800, OwnedBy: "qwen"},
+			{ID: "qwen3.6-max", Object: "model", Created: 1748044800, OwnedBy: "qwen"},
+			{ID: "Qwen/Qwen3.6-Plus", Object: "model", Created: 1747353600, OwnedBy: "qwen"},
+			{ID: "qwen-3.6-plus", Object: "model", Created: 1747353600, OwnedBy: "qwen"},
+			{ID: "qwen3.6-plus", Object: "model", Created: 1747353600, OwnedBy: "qwen"},
+			{ID: "qwen3.6", Object: "model", Created: 1747353600, OwnedBy: "qwen"},
+
+			// --- Qwen (3.7) ---
+			{ID: "Qwen/Qwen3.7-Max-Free", Object: "model", Created: 1751328000, OwnedBy: "qwen"},
+			{ID: "qwen-3.7-max-free", Object: "model", Created: 1751328000, OwnedBy: "qwen"},
+			{ID: "qwen3.7-max-free", Object: "model", Created: 1751328000, OwnedBy: "qwen"},
+			{ID: "Qwen/Qwen3.7-Max", Object: "model", Created: 1751328000, OwnedBy: "qwen"},
+			{ID: "qwen-3.7-max", Object: "model", Created: 1751328000, OwnedBy: "qwen"},
+			{ID: "qwen3.7-max", Object: "model", Created: 1751328000, OwnedBy: "qwen"},
+
+			// --- StepFun ---
+			{ID: "stepfun/Step-3.7-Flash", Object: "model", Created: 1751587200, OwnedBy: "stepfun"},
+			{ID: "step-3.7-flash", Object: "model", Created: 1751587200, OwnedBy: "stepfun"},
+			{ID: "step3.7", Object: "model", Created: 1751587200, OwnedBy: "stepfun"},
+			{ID: "stepfun/Step-3.5-Flash", Object: "model", Created: 1749513600, OwnedBy: "stepfun"},
+			{ID: "step-3.5-flash", Object: "model", Created: 1749513600, OwnedBy: "stepfun"},
+			{ID: "step3.5", Object: "model", Created: 1749513600, OwnedBy: "stepfun"},
+
+			// --- Xiaomi MiMo ---
+			{ID: "xiaomi/mimo-v2.5-pro", Object: "model", Created: 1748304000, OwnedBy: "xiaomi"},
+			{ID: "mimo-v2.5-pro", Object: "model", Created: 1748304000, OwnedBy: "xiaomi"},
+			{ID: "mimo-pro", Object: "model", Created: 1748304000, OwnedBy: "xiaomi"},
+			{ID: "xiaomi/mimo-v2.5", Object: "model", Created: 1747612800, OwnedBy: "xiaomi"},
+			{ID: "mimo-v2.5", Object: "model", Created: 1747612800, OwnedBy: "xiaomi"},
+			{ID: "mimo", Object: "model", Created: 1747612800, OwnedBy: "xiaomi"},
+
+			// --- Google Gemini ---
+			{ID: "google/gemini-3.1-flash-lite", Object: "model", Created: 1748304000, OwnedBy: "google"},
+			{ID: "gemini-3.1-flash-lite", Object: "model", Created: 1748304000, OwnedBy: "google"},
+			{ID: "gemini-flash-lite", Object: "model", Created: 1748304000, OwnedBy: "google"},
 		},
 	}
 	w.Header().Set("Content-Type", "application/json")

@@ -224,10 +224,20 @@ func parseContent(content interface{}, toolNames map[string]string) []api.CCCont
 				if text := contentPartToString(partMap); text != "" {
 					parts = append(parts, api.CCContentPart{Type: "text", Text: strPtr(text)})
 				}
-			case "image_url", "input_image", "image":
-				if text := contentPartToString(partMap); text != "" {
-					parts = append(parts, api.CCContentPart{Type: "text", Text: strPtr(text)})
-				}
+		case "image_url", "input_image", "image":
+			// Prefer explicit source object (input_image format)
+			if source, ok := partMap["source"].(map[string]any); ok {
+				// { type: "input_image", source: { type: "base64", media_type: "...", data: "..." } }
+				parts = append(parts, api.CCContentPart{Type: "image", Content: source})
+			} else if imgURL, ok := partMap["image_url"].(map[string]any); ok {
+				// OpenAI image_url format: { type: "image_url", image_url: { url: "...", detail: "..." } }
+				parts = append(parts, api.CCContentPart{Type: "image", Content: imgURL["url"]})
+			} else if url, ok := partMap["image_url"].(string); ok {
+				// Simplified: { type: "image_url", image_url: "data:..." }
+				parts = append(parts, api.CCContentPart{Type: "image", Content: url})
+			} else if text := contentPartToString(partMap); text != "" {
+				parts = append(parts, api.CCContentPart{Type: "text", Text: strPtr(text)})
+			}
 			case "tool_use", "tool-call":
 				id, _ := partMap["id"].(string)
 				if id == "" {
